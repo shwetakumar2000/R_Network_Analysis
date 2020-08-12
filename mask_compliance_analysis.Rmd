@@ -1,0 +1,109 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+library(igraph)
+library(stringi)
+library(RColorBrewer)
+library(tidyverse)
+
+my_data <- read.csv("edge_data.csv", header = F)
+my_data
+```
+```{r}
+my_network <- graph.data.frame(my_data, directed = F)
+my_network <- simplify(my_network)
+my_network
+```
+```{r}
+node_data <- read.csv("compliance_data.csv", header = T)
+node_data
+```
+```{r}
+my_network <- set.edge.attribute(my_network, "Relationship", value = as.character(my_data$V3))
+my_network
+```
+```{r}
+my_network <- set.vertex.attribute(my_network, "political_party", index = node_data$i.d., as.integer(node_data$political_party))
+my_network <- set.vertex.attribute(my_network, "belief_in_science", index = node_data$i.d., as.integer(node_data$belief_in_science))
+my_network <- set.vertex.attribute(my_network, "mask_compliance", index = node_data$i.d., as.integer(node_data$mask_compliance))
+my_network <- set.vertex.attribute(my_network, "healthcare_availability", index = node_data$i.d., as.integer(node_data$healthcare_availability))
+my_network <- set.vertex.attribute(my_network, "health_risk_overexaggeration", index = node_data$i.d., as.integer(node_data$healthcare_availability))
+my_network <- set.vertex.attribute(my_network, "misconception_score", index = node_data$i.d., as.integer(node_data$misconception_score))
+
+my_network
+
+```
+```{r}
+assortativity(my_network, V(my_network)$health_risk_overexaggeration)
+```
+```{r}
+# Create function for measuring % of ties between similar nodes
+homophily <- function(graph,vertex.attr,attr.val=NULL,prop=T){
+#Assign names as vertex attributes for edgelist output
+V(graph)$name<-vertex_attr(graph,vertex.attr)
+#Get the basic edgelist
+ee<-get.data.frame(graph)
+#If not specifying on particular attribute value, get percentage (prop=T)
+#or count (prop=F) of all nodes tied with matching attribute#
+if(is.null(attr.val)){
+ifelse(prop==T,sum(ee[,1]==ee[,2])/nrow(ee),sum(ee[,1]==ee[,2]))
+#If not null, get proportion (prop=T) or count (prop=F) of
+#edges among nodes with that particular node attribute value
+} else {
+ifelse(prop==T,sum(ee[,1]==attr.val & ee[,2]==attr.val)/nrow(ee[ee[,1]==attr.val|ee[,2]==attr.val,]),
+sum(ee[,1]==attr.val & ee[,2]==attr.val))
+}
+}
+```
+```{r}
+homophily(my_network,"political_party")
+homophily(my_network,"mask_compliance")
+homophily(my_network,"health_risk_overexaggeration")
+homophily(my_network,"healthcare_availability")
+
+```
+```{r}
+plot(my_network)
+```
+```{r}
+V(my_network)$color <- ifelse(V(my_network)$mask_compliance > 3, "light green", "white")
+plot(my_network, main = "Figure 1: Homophily & Mask Compliance", vertex.label.color = "black")
+legend("left", legend = c("Compliant", "Not Compliant"), fill = c("light green", "white"), title = "Mask Compliance", cex = 0.60)
+
+```
+```{r}
+V(my_network)$color <- ifelse(V(my_network)$health_risk_overexaggeration > 3, "purple", "red")
+V(my_network)$shape <- ifelse(V(my_network)$mask_compliance > 3, "circle", "square")
+plot(my_network, main = "Health Risk and Mask Compliance", vertex.label = NA, edge.weight = as.integer(E(my_network)$Strength))
+
+legend("bottomright",legend=c("Compliant", "Not Compliant"),fill=NA, cex = 0.75, title = "Mask Compliance", pch=c(1,0), pt.cex = 1, border=F, bty = "n")
+
+legend("right",legend=c("Scared","Not Scared"),fill = c("purple", "red"), cex = 0.75, title = "Health Risk Factor", bty = "n")
+
+
+```
+```{r}
+V(my_network)$color <- ifelse(V(my_network)$misconception_score > 0, "red", "white")
+V(my_network)$shape <- ifelse(V(my_network)$health_risk_overexaggeration > 2, "circle", "square")
+plot(my_network, main = "Figure 3: Misconceptions and Health Risk", vertex.label = NA, edge.weight = as.integer(E(my_network)$Strength))
+
+legend("bottomright",legend=c("Scared", "Not Scared"),fill=NA, cex = 0.75, title = "Health Risk", pch=c(1,0), pt.cex = 1, border=F, bty = "n")
+
+legend("left",legend=c("Yes","No"),fill = c("red", "white"), cex = 0.75, title = "Believes in Misconception", bty = "n")
+```
+
+```{r}plot(x, y, main="title", sub="subtitle",
+  xlab="X-axis label", ylab="y-axix label",
+  xlim=c(xmin, xmax), ylim=c(ymin, ymax))
+  lm_fit <- lm(mpg ~ cyl + hp, data=df)
+  summary(lm_fit)
+```{r}
+model<-lm(mask_compliance~health_risk_overexaggeration,data=node_data)
+plot(node_data$health_risk_overexaggeration,node_data$mask_compliance,main="Mask Compliance and Health Risk",xlab="health risk", ylab="mask compliance" )
+model
+```
+
+```
+
